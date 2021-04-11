@@ -1,6 +1,6 @@
-import { RepositoriesQueryResponse } from "./queries";
+import { SearchReposQueryResponse } from "./queries";
 
-export const responseDataMock: RepositoriesQueryResponse = {
+export const searchReposQueryMock: SearchReposQueryResponse = {
   data: {
     search: {
       edges: [

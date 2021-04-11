@@ -1,12 +1,12 @@
 import { gql } from "graphql-request";
 
-export const RepositoriesQuery = gql`
+export const SearchReposQuery = gql`
   query searchRepos($searchParam: String, $first: Int, $after: String) {
     search(
       query: $searchParam
-      type: REPOSITORY
       first: $first
       after: $after
+      type: REPOSITORY
     ) {
       edges {
         node {
@@ -22,14 +22,7 @@ export const RepositoriesQuery = gql`
   }
 `;
 
-export type RepoNodeData = {
-  name: string;
-  url: string;
-  stargazerCount: number;
-  forkCount: number;
-};
-
-export type RepositoriesQueryResponse = {
+export type SearchReposQueryResponse = {
   data: {
     search: {
       edges: {

@@ -1,10 +1,5 @@
-import { ReactReposTable } from "./ReactReposTable";
-import { Card } from "antd";
+import { SearchReposTable } from "./SearchReposTable";
 
 export const App = () => {
-  return (
-    <Card>
-      <ReactReposTable />
-    </Card>
-  );
+  return <SearchReposTable />;
 };
