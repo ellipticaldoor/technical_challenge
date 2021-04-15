@@ -1,49 +1,61 @@
 import { render, fireEvent, waitFor } from "@testing-library/react";
+import { GraphQLClient } from "graphql-request";
 import { SearchReposTable } from "./SearchReposTable";
 import { searchReposQueryMock } from "./mocks";
-import { client } from "./client";
 import { SearchReposQuery } from "./queries";
-
-const clientMock = jest.spyOn(client, "request");
-
-beforeEach(() => {
-  jest.resetAllMocks();
-  clientMock.mockResolvedValue(searchReposQueryMock);
-});
 
 describe("SearchReposQuery", () => {
   test("it renders a search query by default", async () => {
-    const { findAllByRole } = render(<SearchReposTable />);
+    const mockRequest = jest.fn().mockResolvedValue(searchReposQueryMock);
+    const { findAllByRole } = render(
+      <SearchReposTable
+        client={({ request: mockRequest } as any) as GraphQLClient}
+      />,
+    );
 
     await waitFor(() =>
-      expect(clientMock).toHaveBeenCalledWith(SearchReposQuery, {
-        variables: { after: undefined, first: 10, searchParam: "react" },
+      expect(mockRequest).toHaveBeenCalledWith(SearchReposQuery, {
+        after: undefined,
+        first: 10,
+        searchParam: "react project",
       }),
     );
 
     const Rows = await findAllByRole("link");
 
-    expect(Rows.length).toEqual(searchReposQueryMock.data.search.edges.length);
+    expect(Rows.length).toEqual(searchReposQueryMock.search.edges?.length);
   });
 
   test("it requests the next page when button is clicked", async () => {
-    const { findByText } = render(<SearchReposTable />);
+    const mockRequest = jest.fn().mockResolvedValue(searchReposQueryMock);
+    const { findByText } = render(
+      <SearchReposTable
+        client={({ request: mockRequest } as any) as GraphQLClient}
+      />,
+    );
 
-    await waitFor(() => expect(clientMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mockRequest).toHaveBeenCalledTimes(1));
 
-    const FetchNextPageButton = await findByText("Get next page");
+    const NextButton = await findByText("Next");
 
-    fireEvent.click(FetchNextPageButton);
+    fireEvent.click(NextButton);
 
     await waitFor(() =>
-      expect(clientMock).toHaveBeenCalledWith(SearchReposQuery, {
-        variables: { after: "Y3Vyc29yOjEw", first: 10, searchParam: "react" },
+      expect(mockRequest).toHaveBeenCalledWith(SearchReposQuery, {
+        after: "Y3Vyc29yOjEw",
+        first: 10,
+        searchParam: "react project",
       }),
     );
   });
 
   test("it requests a new set of repos when the search input changes", async () => {
-    const { findByPlaceholderText } = render(<SearchReposTable />);
+    const mockRequest = jest.fn().mockResolvedValue(searchReposQueryMock);
+    const { findByPlaceholderText } = render(
+      <SearchReposTable
+        client={({ request: mockRequest } as any) as GraphQLClient}
+      />,
+    );
 
     const SearchInput = await findByPlaceholderText("Search");
 
@@ -52,12 +64,10 @@ describe("SearchReposQuery", () => {
     });
 
     await waitFor(() =>
-      expect(clientMock).toHaveBeenCalledWith(SearchReposQuery, {
-        variables: {
-          after: undefined,
-          first: 10,
-          searchParam: "css libraries",
-        },
+      expect(mockRequest).toHaveBeenCalledWith(SearchReposQuery, {
+        after: undefined,
+        first: 10,
+        searchParam: "css libraries",
       }),
     );
   });

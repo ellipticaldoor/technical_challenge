@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Card, Button, Table, Divider, Input } from "antd";
-import { client } from "./client";
+import { useState, useEffect, useCallback } from "react";
+import { Card, Button, Table, Input } from "antd";
+import { GraphQLClient } from "graphql-request";
 import { SearchReposQuery, SearchReposQueryResponse } from "./queries";
-// import { searchReposQueryMock } from "./mocks";
 
 type SearchDataSource = {
   id: string;
@@ -13,9 +12,10 @@ type SearchDataSource = {
 };
 
 const mapSearchResponseToDataSource = ({
-  data,
+  search,
 }: SearchReposQueryResponse): SearchDataSource[] => {
-  return data.search.edges.map(
+  if (!search.edges) return [];
+  return search.edges.map(
     ({ node: { name, url, stargazerCount, forkCount } }, index) => ({
       id: `${index}-${name}`,
       name,
@@ -51,44 +51,64 @@ const searchTableColumns = [
 
 const REPOS_PER_PAGE = 10;
 
-export const SearchReposTable = () => {
-  const [searchParam, setSearchParam] = useState("react");
-  const cursor = useRef<string>();
+type SearchReposTableProps = {
+  client: GraphQLClient;
+};
+
+export const SearchReposTable: React.FC<SearchReposTableProps> = ({
+  client,
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [searchParam, setSearchParam] = useState("react project");
   const [tableDataSource, setTableDataSource] = useState<SearchDataSource[]>(
     [],
   );
+  const [currentCursor, setCurrentCursor] = useState<string>();
+  const [previousCursor, setPreviousCursor] = useState<string>();
 
-  const fetchNextPage = useCallback(
-    async (useCursor?: boolean) => {
-      // setTableDataSource(mapSearchResponseToDataSource(searchReposQueryMock));
+  const fetchPage = useCallback(
+    async (cursor?: string) => {
+      if (loading) return;
+
+      if (!searchParam) {
+        setTableDataSource([]);
+        return;
+      }
+
+      setLoading(true);
       const response = await client.request<SearchReposQueryResponse>(
         SearchReposQuery,
         {
-          variables: {
-            searchParam,
-            first: REPOS_PER_PAGE,
-            after: useCursor ? cursor.current : undefined,
-          },
+          searchParam,
+          first: REPOS_PER_PAGE,
+          after: cursor,
         },
       );
+      setLoading(false);
 
-      setTableDataSource((prev) => [
-        ...prev,
-        ...mapSearchResponseToDataSource(response),
-      ]);
-      const lastNodeIndex = response.data.search.edges.length - 1;
-      const nextCursor = response.data.search.edges[lastNodeIndex].cursor;
-      cursor.current = nextCursor;
+      setTableDataSource(mapSearchResponseToDataSource(response));
+
+      if (response.search.edges && response.search.edges.length) {
+        const lastNodeIndex = response.search.edges.length - 1;
+        const nextCursor = response.search.edges[lastNodeIndex].cursor;
+        setCurrentCursor(nextCursor);
+      }
     },
     [searchParam],
   );
 
+  // Reset the pagination cursor when the search term changes
   useEffect(() => {
-    fetchNextPage();
-  }, [fetchNextPage]);
+    setCurrentCursor(undefined);
+    setPreviousCursor(undefined);
+  }, [searchParam]);
+
+  useEffect(() => {
+    fetchPage();
+  }, [fetchPage]);
 
   return (
-    <Card>
+    <Card style={{ border: "none" }}>
       <Input
         placeholder="Search"
         value={searchParam}
@@ -96,13 +116,28 @@ export const SearchReposTable = () => {
           setSearchParam(event.target.value);
         }}
       />
-      <Divider />
-      <Button onClick={() => fetchNextPage(true)}>Get next page</Button>
-      <Divider />
+      <Button
+        disabled={!previousCursor || loading}
+        onClick={() => fetchPage(previousCursor)}
+        style={{ margin: "15px 15px 15px 0px" }}
+      >
+        Prev
+      </Button>
+      <Button
+        disabled={!currentCursor || loading}
+        onClick={() => {
+          setPreviousCursor(currentCursor);
+          fetchPage(currentCursor);
+        }}
+      >
+        Next
+      </Button>
       <Table
         dataSource={tableDataSource}
         columns={searchTableColumns}
         rowKey="id"
+        loading={loading}
+        pagination={false}
       />
     </Card>
   );

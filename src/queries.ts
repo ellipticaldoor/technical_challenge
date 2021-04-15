@@ -1,7 +1,7 @@
 import { gql } from "graphql-request";
 
 export const SearchReposQuery = gql`
-  query searchRepos($searchParam: String, $first: Int, $after: String) {
+  query searchRepos($searchParam: String!, $first: Int!, $after: String) {
     search(
       query: $searchParam
       first: $first
@@ -9,6 +9,7 @@ export const SearchReposQuery = gql`
       type: REPOSITORY
     ) {
       edges {
+        cursor
         node {
           ... on Repository {
             name
@@ -23,17 +24,15 @@ export const SearchReposQuery = gql`
 `;
 
 export type SearchReposQueryResponse = {
-  data: {
-    search: {
-      edges: {
-        cursor: string;
-        node: {
-          name: string;
-          url: string;
-          stargazerCount: number;
-          forkCount: number;
-        };
-      }[];
-    };
+  search: {
+    edges?: {
+      cursor: string;
+      node: {
+        name: string;
+        url: string;
+        stargazerCount: number;
+        forkCount: number;
+      };
+    }[];
   };
 };
